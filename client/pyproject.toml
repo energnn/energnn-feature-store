@@ -1,0 +1,29 @@
+[project]
+name = "energnn-feature-store-client"
+version = "0.1.0.dev"
+description = "Client to use with the EnerGNN feature store service"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "energnn==0.2.0"
+]
+authors = [
+    { name = "Hugo KULESZA", email = "hugo.kulesza@rte-france.com" },
+    { name = "Steve NOUATIN", email = "steve.nouatin_externe@rte-france.com" }
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "flake8>=7.0.0",
+    "Flake8-pyproject==1.2.3",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pytest]
+testpaths = [
+    "tests"
+]

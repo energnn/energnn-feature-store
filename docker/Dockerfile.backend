@@ -1,0 +1,35 @@
+FROM python:3.12-slim
+
+ENV PATH="${PATH}:/root/.local/bin"
+ENV PYTHONPATH=.
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends ca-certificates bash \
+ && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+###### FOR DEV ONLY: PATCH FOR SECURED S3 COMMUNICATION ######
+
+# Copy minio TLS certificate
+COPY ./docker/minio/certs/public.crt /usr/local/share/ca-certificates/minio.crt
+
+# Add the certificate to the store
+RUN chmod 644 /usr/local/share/ca-certificates/minio.crt \
+ && update-ca-certificates
+
+# force boto3/requests to use the bundle
+ENV AWS_CA_BUNDLE=/usr/local/share/ca-certificates/minio.crt
+ENV REQUESTS_CA_BUNDLE=/usr/local/share/ca-certificates/minio.crt
+
+###### END OF THE PATCH (To remove/comment in production) ######
+
+# Copy uv dependencies
+COPY ./uv.lock ./pyproject.toml /app/
+
+# Install uv and the package
+RUN pip install --no-cache-dir uv \
+    && uv sync --no-dev
+
+# Copy the rest of the app
+COPY ./app /app

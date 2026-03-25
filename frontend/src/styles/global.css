@@ -1,0 +1,35 @@
+/*
+  Simulates a global “zoom” using transform: scale.
+  - change the --app-scale variable to adjust the level (0.75 => 75%).
+  - width/height compensate so that the document retains the same scrollable area.
+*/
+
+:root {
+  --app-scale: 0.75; /* <-- change this to adjust global zoom (1.0 = 100%) */
+}
+
+/* Ensure html/body take full height */
+html, body {
+  height: 100%;
+  margin: 0;
+}
+
+/* Scale the app root and compensate width/height so body scrolls normally */
+#app {
+  transform-origin: top left;
+  transform: scale(var(--app-scale)) translateZ(0);
+  width: calc(100% / var(--app-scale));   /* compensation so scaled content fills viewport */
+  height: calc(100% / var(--app-scale));
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Make sure root children occupy full height and the scroll bar is on the body */
+body {
+  overflow: auto; /* body will scroll if needed */
+}
+
+/* Prevent internal overflow surprises for #app direct children */
+#app > * {
+  min-height: 100%;
+}

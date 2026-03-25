@@ -1,0 +1,64 @@
+version: '3.8'
+services:
+  backend:
+    build:
+      context: ..
+      dockerfile: ./docker/Dockerfile.backend
+    container_name: feature-store-backend
+    env_file:
+      - ../app/.env
+    volumes:
+      - ../app/secrets/s3_aes_key.bin:/run/secrets/s3_aes_key.bin:ro
+      - ../app/aws:/root/.aws:ro
+    ports:
+      - "8000:8000"
+    # DEV COMMAND
+    command: bash -c "source /app/.venv/bin/activate && python /app/seed_db.py && uvicorn main:app --reload --host 0.0.0.0 --port 8000"
+    # PROD COMMAND
+    # command: bash -c "source /app/.venv/bin/activate && uvicorn main:app --reload --host 0.0.0.0 --port 8000"
+    depends_on:
+      - postgresql
+      - minio # TO REMOVE/COMMENT FOR PROD
+    restart: always
+  
+  frontend:
+    build:
+      context: ..
+      dockerfile: ./docker/Dockerfile.frontend
+    env_file:
+      - ../frontend/.env
+    ports:
+      - 5173:5173
+    command: npm run dev -- --host 0.0.0.0 --port 5173
+    depends_on:
+      - backend
+    restart: always
+
+  postgresql:
+    image: postgres:14.1
+    container_name: postgresql
+    env_file:
+      - ../private.conf
+    volumes:
+      - feature-store-data:/var/lib/postgresql/data/
+    ports:
+      - "5432:5432"
+    restart: always
+
+## SERVICE ONLY USED IN DEV MODE (Comment in PROD)
+  minio:
+    image: quay.io/minio/minio:RELEASE.2025-07-23T15-54-02Z
+    container_name: minio
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000" # API S3
+      - "9001:9001" # UI web
+    env_file:
+      - ./minio.env
+    volumes:
+      - minio_data:/data
+      - ./minio/certs:/root/.minio/certs:ro
+
+volumes:
+  feature-store-data:
+  minio_data:  # TO COMMENT FOR PROD
