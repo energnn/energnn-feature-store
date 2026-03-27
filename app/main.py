@@ -29,9 +29,10 @@ tags_metadata = [
     },
     {
         "name": "Problem instances",
-        "description": "Metadata of ARGO projects problem instances",
+        "description": "Metadata of EnerGNN projects problem instances",
     },
-    {"name": "Datasets", "description": "Metadata of ARGO projects datasets"},
+    {"name": "Datasets", "description": "Metadata of EnerGNN projects datasets"},
+    {"name": "Runs", "description": "Metadata of EnerGNN training runs"},
 ]
 
 # Add middleware to handle Cross-Origin Resource Sharing (CORS)
