@@ -1,0 +1,18 @@
+FROM node:24-alpine
+
+WORKDIR /app/frontend
+
+# Copy frontend files
+COPY ./frontend /app/frontend/
+
+RUN rm -rf node_modules package-lock.json
+RUN npm cache clean --force
+
+# Install frontend dependencies
+RUN npm install
+
+# Build the app for production
+# RUN npm run build
+
+# Expose the right port
+EXPOSE 5173
