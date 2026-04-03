@@ -5,7 +5,7 @@ description = "Client to use with the EnerGNN feature store service"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "energnn==0.2.0"
+    "energnn>=0.2.0"
 ]
 authors = [
     { name = "Hugo KULESZA", email = "hugo.kulesza@rte-france.com" },
