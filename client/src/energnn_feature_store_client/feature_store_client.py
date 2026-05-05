@@ -422,7 +422,7 @@ class FeatureStoreClient(RemoteRegistryClient):
                 raise Exception(
                     f"Error while trying to download dataset : {response.json()['message']}."
                 )
-            write_zip_from_response(response, output_dir, unzip=False)
+            write_zip_from_response(response, output_dir, unzip=True)
         else:
             logger.info(f"Dataset file for {key} already downloaded")
         dataset: ProblemDataset = ProblemDataset.from_pickle(local_path / key)

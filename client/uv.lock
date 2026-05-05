@@ -632,7 +632,7 @@ dev = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "energnn", specifier = "==0.2.0" }]
+requires-dist = [{ name = "energnn", specifier = ">=0.2.0" }]
 
 [package.metadata.requires-dev]
 dev = [
