@@ -198,9 +198,12 @@ class FeatureStoreClient(RemoteRegistryClient):
 
         :param min_version: (optional) Minimal code version of the problem to retrieve.
         :param config_id: (optional) Identifier of the configuration file used to generate the instances.
-        :param date_filters: (optional) For any potential date tag in the problems metadata, defines the range to select from.
-        :param equal_filters: (optional) For any tag in the problems metadata, defines the exact value (as a string) to select from.
-        :param range_filters: (optional) For any potential float tag in the problems metadata, defines the range to select from.
+        :param date_filters: (optional) For any potential date tag in the problems metadata, defines the range
+                            to select from.
+        :param equal_filters: (optional) For any tag in the problems metadata, defines the exact value (as a string)
+                            to select from.
+        :param range_filters: (optional) For any potential float tag in the problems metadata, defines the range
+                            to select from.
         :return: List of problem metadata.
         """
         params: dict = {"min_version": min_version, "project_name": self.project_name}
