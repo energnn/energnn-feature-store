@@ -187,18 +187,21 @@ def get_instances(
     min_version: int = 0,
     config_id: str | None = None,
     date_filters: dict[str, tuple[datetime, datetime]] | None = None,
-    tag_filters: dict | None = None,
+    equal_filters: dict[str, str] | None = None,
+    range_filters: dict[str, tuple[float, float]] | None = None,
     db: Session = Depends(get_db),
 ):
     logging.info(
-        f"Getting instances info for filters {date_filters} and {tag_filters}."
+        f"Getting instances info for filters {date_filters} and {equal_filters}."
     )
     if date_filters is None:
         date_filters = {}
-    if tag_filters is None:
-        tag_filters = {}
+    if equal_filters is None:
+        equal_filters = {}
+    if range_filters is None:
+        range_filters = {}
     items = crud.get_instances(
-        db, project_name, min_version, config_id, date_filters, tag_filters
+        db, project_name, min_version, config_id, date_filters, equal_filters, range_filters
     )
     return items
 

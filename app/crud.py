@@ -4,7 +4,7 @@ import json
 from botocore.exceptions import ClientError
 from fastapi import UploadFile
 from sqlalchemy.orm import Session
-from sqlalchemy import or_, and_, DateTime
+from sqlalchemy import or_, and_, DateTime, Float
 import models, schemas
 from datetime import datetime
 import s3
@@ -52,7 +52,8 @@ def get_instances(
     min_version: int,
     config_id: str,
     date_filters: dict[str, tuple[datetime, datetime]],
-    tags_filters: dict,
+    equal_filters: dict[str, str],
+    range_filters: dict[str, tuple[float, float]]
 ):
     query = db.query(models.ProblemInstance).filter(
         (models.ProblemInstance.project_name == project_name)
@@ -61,10 +62,16 @@ def get_instances(
     for k, v in date_filters.items():
         query = query.filter(
             models.ProblemInstance.filter_tags[k]
-            .astext.cast(DateTime)
-            .between(v[0], v[1])
+                .astext.cast(DateTime)
+                .between(v[0], v[1])
         )
-    for k, v in tags_filters.items():
+    for k, v in range_filters.items():
+        query = query.filter(
+            models.ProblemInstance.filter_tags[k]
+                  .astext.cast(Float)
+                  .between(v[0], v[1])
+        )
+    for k, v in equal_filters.items():
         query = query.filter(models.ProblemInstance.filter_tags[k].astext == v)
     if config_id is not None:
         query = query.filter(models.ProblemInstance.config_id == config_id)
