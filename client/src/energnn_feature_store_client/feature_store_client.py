@@ -213,7 +213,7 @@ class FeatureStoreClient(RemoteRegistryClient):
         if date_filters is not None:
             body["date_filters"] = date_filters
         if equal_filters is not None:
-            body["tag_filters"] = equal_filters
+            body["equal_filters"] = equal_filters
         if range_filters is not None:
             body["range_filters"] = range_filters
         response = requests.get(url=self.instance_url + "s", params=params, json=body)
