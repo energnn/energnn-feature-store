@@ -22,7 +22,6 @@ class ProblemDataset(dict):
     :param split: Dataset split name (e.g., "train", "val", "test").
     :param version: Version number of the dataset.
     :param instances: List of ProblemMetadata objects describing each instance.
-    :param size: Total number of instances in the dataset.
     :param context_max_shape: Maximum dimensions of context graphs across instances.
     :param decision_max_shape: Maximum dimensions of decision graphs across instances.
     :param generation_date: Timestamp when the dataset was generated.
@@ -36,7 +35,6 @@ class ProblemDataset(dict):
         split: str,
         version: int,
         instances: list[ProblemMetadata],
-        size: int,
         context_max_shape: dict,
         decision_max_shape: dict,
         generation_date: datetime,
@@ -49,7 +47,7 @@ class ProblemDataset(dict):
         self["name"] = name
         self["split"] = split
         self["version"] = version
-        self["size"] = size
+        self["size"] = len(instances)
         self["context_max_shape"] = context_max_shape
         self["decision_max_shape"] = decision_max_shape
         self["generation_date"] = generation_date

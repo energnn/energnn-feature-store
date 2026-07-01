@@ -265,7 +265,6 @@ def test_register_dataset_success_and_fail(mock_uuid, tmp_path):
         split="train",
         version=1,
         instances=[pm1],
-        size=1,
         context_max_shape={},
         decision_max_shape={},
         generation_date=datetime.now(),
