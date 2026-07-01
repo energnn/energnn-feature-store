@@ -190,15 +190,20 @@ class FeatureStoreClient(RemoteRegistryClient):
         min_version: int,
         config_id: str | None = None,
         date_filters: dict[str, tuple[datetime, datetime]] | None = None,
-        tag_filters: dict | None = None,
+        range_filters: dict[str, tuple[float, float]] | None = None,
+        equal_filters: dict[str, str] | None = None,
     ) -> list[ProblemMetadata] | None:
         """
         Retrieve from the feature store the list of ProblemMetadata corresponding to the chosen filter parameters.
 
         :param min_version: (optional) Minimal code version of the problem to retrieve.
         :param config_id: (optional) Identifier of the configuration file used to generate the instances.
-        :param date_filters: (optional) For any potential date in the problems metadata, defines the range to select from.
-        :param tag_filters: (optional) Any specific key/value tags to filter the instances with.
+        :param date_filters: (optional) For any potential date tag in the problems metadata, defines the range
+                            to select from.
+        :param equal_filters: (optional) For any tag in the problems metadata, defines the exact value (as a string)
+                            to select from.
+        :param range_filters: (optional) For any potential float tag in the problems metadata, defines the range
+                            to select from.
         :return: List of problem metadata.
         """
         params: dict = {"min_version": min_version, "project_name": self.project_name}
@@ -207,8 +212,10 @@ class FeatureStoreClient(RemoteRegistryClient):
             params["config_id"] = config_id
         if date_filters is not None:
             body["date_filters"] = date_filters
-        if tag_filters is not None:
-            body["tag_filters"] = tag_filters
+        if equal_filters is not None:
+            body["equal_filters"] = equal_filters
+        if range_filters is not None:
+            body["range_filters"] = range_filters
         response = requests.get(url=self.instance_url + "s", params=params, json=body)
         if response.status_code != 200:
             logger.error(response.json())
