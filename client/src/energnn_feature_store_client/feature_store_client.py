@@ -250,16 +250,16 @@ class FeatureStoreClient(RemoteRegistryClient):
         name: str,
         config_id: str,
         code_version: int,
-        output_dir: Path,
+        output_dir: Path | None = None,
         unzip: bool = True,
-    ) -> Path:
+    ) -> Path | bytes:
         """
         Downloads a registered problem instance if not already available locally.
 
         :param name: Instance name.
         :param config_id: Configuration identifier.
         :param code_version: Code version.
-        :param output_dir: Directory where to save the instance.
+        :param output_dir: Optional directory where to save the instance. If None, the instance is returned as bytes.
         :param unzip: If True, unzip the downloaded file.
         :return: Local path of the downloaded instance.
         :raises Exception: If the instance does not exist in the feature store.
@@ -285,6 +285,8 @@ class FeatureStoreClient(RemoteRegistryClient):
                 raise Exception(
                     f"Error while trying to download instance : {response.json()['message']}."
                 )
+            if output_dir is None:
+                return response.content
             return write_zip_from_response(response, output_dir, unzip)
         else:
             logger.info(
