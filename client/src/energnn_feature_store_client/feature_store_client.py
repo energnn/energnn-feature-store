@@ -269,30 +269,34 @@ class FeatureStoreClient(RemoteRegistryClient):
             raise Exception(
                 f"Instance with name '{name}', config ID '{config_id}' and version {code_version} does not exist."
             )
+
         storage_path = metadata["storage_path"]
-        local_path = output_dir / storage_path
-        if not local_path.exists():
-            instance_key = {
-                "project_name": self.project_name,
-                "name": name,
-                "config_id": config_id,
-                "code_version": code_version,
-            }
-            response = requests.get(
-                url=self.instance_url + "/download", params=instance_key
-            )
-            if response.status_code != 200:
-                raise Exception(
-                    f"Error while trying to download instance : {response.json()['message']}."
+
+        if output_dir is not None:
+            local_path = output_dir / storage_path
+            if local_path.exists():
+                logger.info(
+                    f"Instance with name '{name}', config ID '{config_id}' and version {code_version} already downloaded"
                 )
-            if output_dir is None:
-                return response.content
-            return write_zip_from_response(response, output_dir, unzip)
-        else:
-            logger.info(
-                f"Instance with name '{name}', config ID '{config_id}' and version {code_version} already downloaded"
+                return local_path
+
+        instance_key = {
+            "project_name": self.project_name,
+            "name": name,
+            "config_id": config_id,
+            "code_version": code_version,
+        }
+        response = requests.get(
+            url=self.instance_url + "/download", params=instance_key
+        )
+        if response.status_code != 200:
+            raise Exception(
+                f"Error while trying to download instance : {response.json()['message']}."
             )
-        return local_path
+        if output_dir is None:
+            return response.content
+        return write_zip_from_response(response, output_dir, unzip)
+
 
     def remove_instance(self, name: str, config_id: str, code_version: int) -> bool:
         """
