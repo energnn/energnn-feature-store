@@ -341,14 +341,14 @@ function buildFilters() {
     }
   }
   if (Object.keys(savedTextFilters.value || {}).length > 0) {
-    filters.tag_filters = savedTextFilters.value;
+    filters.text_filters = savedTextFilters.value;
   }
 
   if (Object.keys(savedDateFilters.value || {}).length > 0) {
     filters.date_filters = savedDateFilters.value;
   }
   if (Object.keys(savedNumericalFilters.value || {}).length > 0) {
-    filters.range_filters = savedNumericalFilters.value;
+    filters.numerical_filters = savedNumericalFilters.value;
   }
   console.log("filters : ", filters)
   return filters;
