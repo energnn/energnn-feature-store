@@ -240,7 +240,8 @@ def filter_instances_page(
     min_version = body.min_version
     max_version = body.max_version
     date_filters = body.date_filters
-    tag_filters = body.tag_filters
+    numerical_filters = body.numerical_filters
+    text_filters = body.text_filters
     count = body.count
 
     query = crud.get_instances_query(
@@ -252,7 +253,8 @@ def filter_instances_page(
         min_version=min_version,
         max_version=max_version,
         date_filters=date_filters,
-        tag_filters=tag_filters,
+        numerical_filters=numerical_filters,
+        text_filters=text_filters,
     )
     try:
         items, next_cursor = crud.get_instances_page(
