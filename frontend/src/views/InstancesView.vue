@@ -48,8 +48,9 @@
         <v-btn text height="56" @click="openAdvanced">Advanced Filters</v-btn>
         <AdvancedFiltersDialog
           v-model="advDialogVisible"
-          :initialTagFilters="savedTagFilters"
+          :initialTextFilters="savedTextFilters"
           :initialDateFilters="savedDateFilters"
+          :initialNumericalFilters="savedNumericalFilters"
           @save="onAdvSave"
           @cancel="onAdvCancel"
         />
@@ -233,21 +234,24 @@ function openDetails(item) {
 
 // advanced filters
 const advDialogVisible = ref(false);
-const savedTagFilters = ref({});
+const savedTextFilters = ref({});
 const savedDateFilters = ref({});
+const savedNumericalFilters = ref({});
 
 function openAdvanced() {
   advDialogVisible.value = true;
 }
 
 function onAdvSave(payload) {
-  savedTagFilters.value = payload.tagFilters || {};
+  savedTextFilters.value = payload.textFilters || {};
   savedDateFilters.value = payload.dateFilters || {};
+  savedNumericalFilters.value = payload.numericalFilters || {};
 }
 
 function onAdvCancel() {
-  savedTagFilters.value = {};
+  savedTextFilters.value = {};
   savedDateFilters.value = {};
+  savedNumericalFilters.value = {};
   advDialogVisible.value = false;
 }
 
@@ -336,12 +340,15 @@ function buildFilters() {
         break;
     }
   }
-  if (Object.keys(savedTagFilters.value || {}).length > 0) {
-    filters.tag_filters = savedTagFilters.value;
+  if (Object.keys(savedTextFilters.value || {}).length > 0) {
+    filters.text_filters = savedTextFilters.value;
   }
 
   if (Object.keys(savedDateFilters.value || {}).length > 0) {
     filters.date_filters = savedDateFilters.value;
+  }
+  if (Object.keys(savedNumericalFilters.value || {}).length > 0) {
+    filters.numerical_filters = savedNumericalFilters.value;
   }
   console.log("filters : ", filters)
   return filters;
@@ -413,8 +420,9 @@ async function clearFilters() {
   filterConfig.value = null;
   filterVersionOp.value = ">=";
   filterVersionValue.value = null;
-  savedTagFilters.value = {};
+  savedTextFilters.value = {};
   savedDateFilters.value = {};
+  savedNumericalFilters.value = {};
   await loadPageFromStore(1, true);
 }
 

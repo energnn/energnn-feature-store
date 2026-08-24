@@ -47,7 +47,8 @@ class ProblemInstanceFilter(BaseModel):
     min_version: int | None = None
     max_version: int | None = None
     date_filters: dict[str, tuple[datetime, datetime]] | None = None
-    tag_filters: dict | None = None
+    numerical_filters: dict[str, tuple[float | None, float | None]] | None = None
+    text_filters: dict | None = None
     count: bool = False
 
 
