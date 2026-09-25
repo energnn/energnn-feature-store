@@ -7,6 +7,8 @@ from fastapi import FastAPI, Depends, Request, Body, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi import Security, HTTPException
+from fastapi.security.api_key import APIKeyHeader
 from sqlalchemy.exc import NoResultFound, IntegrityError
 from sqlalchemy.orm import Session
 
@@ -20,7 +22,15 @@ logger = logging.getLogger("uvicorn.error")
 
 models.Base.metadata.create_all(bind=engine)
 
-app = FastAPI()
+API_KEY = os.getenv("API_KEY")
+api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+
+def require_api_key(key: str = Security(api_key_header)):
+    if key != API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid API key")
+
+app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None,
+              dependencies=[Depends(require_api_key)])
 
 tags_metadata = [
     {
