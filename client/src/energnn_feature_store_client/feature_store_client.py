@@ -671,6 +671,7 @@ def _check_response(response: requests.Response) -> None:
             logger.error(response.json())
         return False
 
+
 def write_zip_from_response(
     response: requests.Response, output_dir: Path, unzip: bool
 ) -> Path:
