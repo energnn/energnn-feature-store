@@ -49,13 +49,18 @@ class FeatureStoreClient(RemoteRegistryClient):
     dataset_url: str
     run_url: str
 
-    def __init__(self, *, project_name: str, feature_store_url: str):
+    def __init__(self, *, project_name: str, feature_store_url: str, api_key: str | None = None):
         self.project_name = project_name
         self.feature_store_url = feature_store_url
         self.config_url = self.feature_store_url + "/config"
         self.instance_url = self.feature_store_url + "/instance"
         self.dataset_url = self.feature_store_url + "/dataset"
         self.run_url = self.feature_store_url + "/run"
+
+        self._session = requests.Session()
+        resolved_key = api_key if api_key is not None else os.getenv("FEATURE_STORE_API_KEY")
+        if resolved_key:
+            self._session.headers.update({"X-API-Key": resolved_key})
 
     def register_config(self, config_path: str, config_id: str) -> bool:
         """
@@ -82,7 +87,7 @@ class FeatureStoreClient(RemoteRegistryClient):
 
         zip_files_to_send(config_path)
         with open(config_path + ".zip", "rb") as file:
-            response = requests.post(
+            response = self._session.post(
                 url=self.config_url,
                 params={"project_name": self.project_name},
                 files={
@@ -90,8 +95,7 @@ class FeatureStoreClient(RemoteRegistryClient):
                     "config": (None, json.dumps(register_info), "application/json"),
                 },
             )
-        if response.status_code != 200:
-            logger.error(response.json())
+        if not _check_response(response):
             return False
         os.remove(config_path + ".zip")
         return True
@@ -102,7 +106,7 @@ class FeatureStoreClient(RemoteRegistryClient):
 
         :return: A list of configuration metadata.
         """
-        response = requests.get(
+        response = self._session.get(
             url=self.config_url + "s", params={"project_name": self.project_name}
         )
         return response.json()
@@ -114,7 +118,7 @@ class FeatureStoreClient(RemoteRegistryClient):
         :param config_id: Configuration identifier.
         :return: Configuration metadata if found, None otherwise.
         """
-        response = requests.get(
+        response = self._session.get(
             url=self.config_url,
             params={"project_name": self.project_name, "config_id": config_id},
         )
@@ -129,23 +133,22 @@ class FeatureStoreClient(RemoteRegistryClient):
         :param config_id: Configuration identifier.
         :return: True if the configuration has been removed, False instead.
         """
-        response = requests.delete(
+        response = self._session.delete(
             url=self.config_url,
             params={"project_name": self.project_name, "config_id": config_id},
         )
-        if response.status_code != 200:
-            logger.error(response.json())
+        if not _check_response(response):
             return False
         return True
 
     def download_config(
         self, config_id: str, output_dir: Path, unzip: bool = True
     ) -> Path:
-        response = requests.get(
+        response = self._session.get(
             url=self.config_url + "/download",
             params={"project_name": self.project_name, "config_id": config_id},
         )
-        if response.status_code != 200:
+        if not _check_response(response):
             raise Exception(
                 f"Error while trying to download configuration {config_id} for project {self.project_name}"
                 f" : {response.json()['message']}."
@@ -168,7 +171,7 @@ class FeatureStoreClient(RemoteRegistryClient):
             instance.save(path=instance_path)
             zip_files_to_send(str(instance_path))
             with open(str(instance_path) + ".zip", "rb") as file:
-                response = requests.post(
+                response = self._session.post(
                     url=self.instance_url,
                     params={"project_name": self.project_name},
                     files={
@@ -180,8 +183,7 @@ class FeatureStoreClient(RemoteRegistryClient):
                         ),
                     },
                 )
-            if response.status_code != 200:
-                logger.error(response.json())
+            if not _check_response(response):
                 return False
         return True
 
@@ -216,9 +218,8 @@ class FeatureStoreClient(RemoteRegistryClient):
             body["equal_filters"] = equal_filters
         if range_filters is not None:
             body["range_filters"] = range_filters
-        response = requests.get(url=self.instance_url + "s", params=params, json=body)
-        if response.status_code != 200:
-            logger.error(response.json())
+        response = self._session.get(url=self.instance_url + "s", params=params, json=body)
+        if not _check_response(response):
             return None
         return response.json()
 
@@ -239,9 +240,8 @@ class FeatureStoreClient(RemoteRegistryClient):
             "config_id": config_id,
             "code_version": code_version,
         }
-        response = requests.get(url=self.instance_url, params=instance_key)
-        if response.status_code != 200:
-            logger.error(response.json())
+        response = self._session.get(url=self.instance_url, params=instance_key)
+        if not _check_response(response):
             return None
         return response.json()
 
@@ -278,10 +278,10 @@ class FeatureStoreClient(RemoteRegistryClient):
                 "config_id": config_id,
                 "code_version": code_version,
             }
-            response = requests.get(
+            response = self._session.get(
                 url=self.instance_url + "/download", params=instance_key
             )
-            if response.status_code != 200:
+            if not _check_response(response):
                 raise Exception(
                     f"Error while trying to download instance : {response.json()['message']}."
                 )
@@ -308,9 +308,8 @@ class FeatureStoreClient(RemoteRegistryClient):
             "config_id": config_id,
             "code_version": code_version,
         }
-        response = requests.delete(url=self.instance_url, params=instance_key)
-        if response.status_code != 200:
-            logger.error(response.json())
+        response = self._session.delete(url=self.instance_url, params=instance_key)
+        if not _check_response(response):
             return False
         logger.info(
             f"Successfully removed instance {name}/{config_id}/{code_version} from feature store."
@@ -336,7 +335,7 @@ class FeatureStoreClient(RemoteRegistryClient):
             dataset.to_pickle(str(dataset_file_path))
             zip_files_to_send(str(dataset_file_path))
             with open(str(dataset_file_path) + ".zip", "rb") as file:
-                response = requests.post(
+                response = self._session.post(
                     url=self.dataset_url,
                     params={"project_name": self.project_name},
                     files={
@@ -348,8 +347,7 @@ class FeatureStoreClient(RemoteRegistryClient):
                         ),
                     },
                 )
-            if response.status_code != 200:
-                logger.error(response.json())
+            if not _check_response(response):
                 return False
         return True
 
@@ -359,11 +357,10 @@ class FeatureStoreClient(RemoteRegistryClient):
 
         :return: List of dataset metadata.
         """
-        response = requests.get(
+        response = self._session.get(
             url=self.instance_url + "s", params={"project_name": self.project_name}
         )
-        if response.status_code != 200:
-            logger.error(response.json())
+        if not _check_response(response):
             return None
         return response.json()
 
@@ -382,9 +379,8 @@ class FeatureStoreClient(RemoteRegistryClient):
             "split": split,
             "version": version,
         }
-        response = requests.get(url=self.dataset_url, params=dataset_key)
-        if response.status_code != 200:
-            logger.error(response.json())
+        response = self._session.get(url=self.dataset_url, params=dataset_key)
+        if not _check_response(response):
             return None
         return response.json()
 
@@ -422,10 +418,10 @@ class FeatureStoreClient(RemoteRegistryClient):
                 "split": split,
                 "version": version,
             }
-            response = requests.get(
+            response = self._session.get(
                 url=self.dataset_url + "/download", params=dataset_key
             )
-            if response.status_code != 200:
+            if not _check_response(response):
                 raise Exception(
                     f"Error while trying to download dataset : {response.json()['message']}."
                 )
@@ -477,9 +473,8 @@ class FeatureStoreClient(RemoteRegistryClient):
             "split": split,
             "version": version,
         }
-        response = requests.delete(url=self.dataset_url, params=dataset_key)
-        if response.status_code != 200:
-            logger.error(response.json())
+        response = self._session.delete(url=self.dataset_url, params=dataset_key)
+        if not _check_response(response):
             return False
         logger.info(f"Successfully removed dataset {str_key} from feature store.")
         return True
@@ -558,7 +553,7 @@ class FeatureStoreClient(RemoteRegistryClient):
                 raise
 
             with open(tmp_archive, "rb") as file:
-                response = requests.post(
+                response = self._session.post(
                     url=self.run_url,
                     params=metadata,
                     files={
@@ -566,8 +561,7 @@ class FeatureStoreClient(RemoteRegistryClient):
                         "step": (None, json.dumps(metadata), "application/json"),
                     },
                 )
-            if response.status_code != 200:
-                logger.error(response.json())
+            if not _check_response(response):
                 return False
         logger.info(f"Successfully registered step {run_name}")
         return True
@@ -581,13 +575,11 @@ class FeatureStoreClient(RemoteRegistryClient):
         """
         run_key = {"project_name": self.project_name, "run_id": run_id}
         try:
-            response = requests.get(url=self.run_url + "/all", params=run_key)
+            response = self._session.get(url=self.run_url + "/all", params=run_key)
         except requests.RequestException as exc:
             logger.error("Failed to call run service: %s", exc)
             return None
-        if response.status_code != 200:
-            body = response.text.strip()
-            logger.error(body)
+        if not _check_response(response):
             return None
 
         try:
@@ -613,9 +605,8 @@ class FeatureStoreClient(RemoteRegistryClient):
         }
         body = steps
 
-        response = requests.delete(url=self.run_url, params=params, json=body)
-        if response.status_code != 200:
-            logger.error(response.json())
+        response = self._session.delete(url=self.run_url, params=params, json=body)
+        if not _check_response(response):
             return False
         logger.info("Successfully removed steps from feature store.")
         return True
@@ -639,9 +630,8 @@ class FeatureStoreClient(RemoteRegistryClient):
             "training_step": step,
         }
 
-        response = requests.get(url=self.run_url + "/download", params=params)
-        if response.status_code != 200:
-            logger.error(response.json())
+        response = self._session.get(url=self.run_url + "/download", params=params)
+        if not _check_response(response):
             return False
 
         if dest_dir.exists():
@@ -668,6 +658,19 @@ class FeatureStoreClient(RemoteRegistryClient):
             except Exception:
                 logger.exception("Failed to cleanup partial extraction at %s", dest_dir)
             return False
+
+
+def _check_response(response: requests.Response) -> bool:
+    if response.status_code != 200:
+        if response.status_code == 401:
+            logger.error(
+                "Unauthorized (401): missing or invalid API key. "
+                "Set FEATURE_STORE_API_KEY or pass api_key= to FeatureStoreClient."
+            )
+        else:
+            logger.error(response.json())
+        return False
+    return True
 
 
 def write_zip_from_response(

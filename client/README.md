@@ -25,13 +25,15 @@ pip install energnn-feature-store-client
 ## Client Initialization
 
 The client requires the project name and the Feature Store service URL.
+You must also provide the Feature Store API key to authenticate with the server, either by setting it with the environment variable `FEATURE_STORE_API_KEY` or by passing it to the constructor.
 
 ```python
 from energnn_feature_store_client import FeatureStoreClient
 
 fs_client = FeatureStoreClient(
     project_name="my_energnn_project",
-    feature_store_url="http://localhost:8000"
+    feature_store_url="http://localhost:8000",
+    #api_key="my_api_key" if not set in environment
 )
 ```
 

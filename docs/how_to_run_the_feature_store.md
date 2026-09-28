@@ -86,6 +86,7 @@ You must create an environment file named **`.env`** inside the **`app`** folder
 DATABASE_URL=    # PostgreSQL URL, e.g. postgresql://username:password@hostname:port/database_name
 S3_ENDPOINT=     # S3 storage endpoint (e.g. in DEV with MinIO: https://minio:9000)
 S3_BUCKET=       # Bucket identifier
+API_KEY=         # API key
 SECRET_KEY_BIN=/run/secrets/s3_aes_key.bin # Do not modify
 ```
 
@@ -124,6 +125,7 @@ The container hosting the frontend also needs access to environment variables. T
 
 ```bash
 VITE_API_BASE_URL=http://localhost:8000  # API URL
+VITE_API_KEY= # API key (corresponding to the server API_KEY environment variable)
 ```
 
 ## 3. Launching the Feature Store

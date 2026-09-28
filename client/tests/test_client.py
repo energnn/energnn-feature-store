@@ -89,7 +89,7 @@ def test_register_config_new_success(mock_uuid):
         # Patch get_config_metadata to return None -> indicates config not stored yet
         client.get_config_metadata = MagicMock(return_value=None)
 
-        with patch("requests.post", return_value=DummyResponse(status_code=200)) as post_mock:
+        with patch("requests.Session.post", return_value=DummyResponse(status_code=200)) as post_mock:
             res = client.register_config(config_path=tmpf.name, config_id="cid")
             assert res is True
 
@@ -117,18 +117,18 @@ def test_get_configs_and_get_config_metadata(monkeypatch):
     client = FeatureStoreClient(project_name="proj", feature_store_url="http://fs")
 
     # get_configs_metadata => calls GET to config_url + "s"
-    with patch("requests.get", return_value=DummyResponse(status_code=200, json_obj=[{"a": 1}])) as get_mock:
+    with patch("requests.Session.get", return_value=DummyResponse(status_code=200, json_obj=[{"a": 1}])) as get_mock:
         res = client.get_configs_metadata()
         assert res == [{"a": 1}]
         get_mock.assert_called_once()
 
     # get_config_metadata: absent (400) -> None
-    with patch("requests.get", return_value=DummyResponse(status_code=400, json_obj={"err": "no"})):
+    with patch("requests.Session.get", return_value=DummyResponse(status_code=400, json_obj={"err": "no"})):
         assert client.get_config_metadata("nope") is None
 
     # get_config_metadata: present
     expected = {"config_id": "cid", "hash": "h"}
-    with patch("requests.get", return_value=DummyResponse(status_code=200, json_obj=expected)):
+    with patch("requests.Session.get", return_value=DummyResponse(status_code=200, json_obj=expected)):
         got = client.get_config_metadata("cid")
         assert got == expected
 
@@ -137,12 +137,12 @@ def test_remove_config_paths(monkeypatch):
     client = FeatureStoreClient(project_name="proj", feature_store_url="http://fs")
 
     # case: present and delete success -> True
-    with patch("requests.delete", return_value=DummyResponse(status_code=200)) as delete_mock:
+    with patch("requests.Session.delete", return_value=DummyResponse(status_code=200)) as delete_mock:
         res = client.remove_config("cid")
         assert res is True
 
     # case: present but delete failed (non-200)
-    with patch("requests.delete", return_value=DummyResponse(status_code=500)) as delete_mock:
+    with patch("requests.Session.delete", return_value=DummyResponse(status_code=500)) as delete_mock:
         res2 = client.remove_config("cid")
         assert res2 is False
 
@@ -165,7 +165,7 @@ def test_register_instance_success_and_http_fail(mock_uuid, tmp_path):
 
     # success path: requests.post returns 200
     problem = FakeProblem("instA", pm)
-    with patch("requests.post", return_value=DummyResponse(status_code=200)) as post_mock:
+    with patch("requests.Session.post", return_value=DummyResponse(status_code=200)) as post_mock:
         ok = client.register_instance(problem)
         assert ok is True
         # the HTTP post was called
@@ -173,7 +173,7 @@ def test_register_instance_success_and_http_fail(mock_uuid, tmp_path):
 
     # failure path: requests.post returns non-200 -> should delete uploaded storage and return False
     problem2 = FakeProblem("instB", pm)
-    with patch("requests.post", return_value=DummyResponse(status_code=500)):
+    with patch("requests.Session.post", return_value=DummyResponse(status_code=500)):
         res = client.register_instance(problem2)
         assert res is False
 
@@ -182,23 +182,23 @@ def test_get_instances_and_get_instance_metadata(monkeypatch):
     client = FeatureStoreClient(project_name="proj", feature_store_url="http://fs")
 
     # get_instances_metadata: success
-    with patch("requests.get", return_value=DummyResponse(status_code=200, json_obj=[{"m": 1}])):
+    with patch("requests.Session.get", return_value=DummyResponse(status_code=200, json_obj=[{"m": 1}])):
         res = client.get_instances_metadata(min_version=0)
         assert res == [{"m": 1}]
 
     # get_instances_metadata: HTTP non-200 -> None
-    with patch("requests.get", return_value=DummyResponse(status_code=500, json_obj={"err": "bad"})):
+    with patch("requests.Session.get", return_value=DummyResponse(status_code=500, json_obj={"err": "bad"})):
         res2 = client.get_instances_metadata(min_version=0)
         assert res2 is None
 
     # get_instance_metadata: success
     expected = {"name": "n", "storage_path": "p"}
-    with patch("requests.get", return_value=DummyResponse(status_code=200, json_obj=expected)):
+    with patch("requests.Session.get", return_value=DummyResponse(status_code=200, json_obj=expected)):
         got = client.get_instance_metadata("n", "c", 1)
         assert got == expected
 
     # get_instance_metadata: failure -> None
-    with patch("requests.get", return_value=DummyResponse(status_code=500, json_obj={"err": "x"})):
+    with patch("requests.Session.get", return_value=DummyResponse(status_code=500, json_obj={"err": "x"})):
         assert client.get_instance_metadata("n", "c", 1) is None
 
 
@@ -217,7 +217,7 @@ def test_download_instance_success_and_already_local(tmp_path, monkeypatch):
     # # ensure not exists => will call storage.download
     if local_path.exists():
         local_path.unlink()
-    with patch("requests.get", return_value=DummyResponse(status_code=200,
+    with patch("requests.Session.get", return_value=DummyResponse(status_code=200,
                                                           headers={"Content-Disposition": "filename= inst123;"})) as dl:
         got = client.download_instance("n", "c", 1, output_dir)
         assert got == local_path
@@ -239,7 +239,7 @@ def test_remove_instance_present_and_absent(monkeypatch):
     client = FeatureStoreClient(project_name="proj", feature_store_url="http://fs")
 
     # present -> call requests.delete
-    with patch("requests.delete", return_value=DummyResponse(status_code=200)) as delete_mock:
+    with patch("requests.Session.delete", return_value=DummyResponse(status_code=200)) as delete_mock:
         res = client.remove_instance("n", "c", 1)
         assert res is True
 
@@ -273,12 +273,12 @@ def test_register_dataset_success_and_fail(mock_uuid, tmp_path):
     )
 
     # success path: requests.post returns 200 -> to_pickle + upload called
-    with patch("requests.post", return_value=DummyResponse(status_code=200)) as post_mock:
+    with patch("requests.Session.post", return_value=DummyResponse(status_code=200)) as post_mock:
         ok = client.register_dataset(ds)
         assert ok is True
 
     # fail path: requests.post returns non-200 -> False and no upload
-    with patch("requests.post", return_value=DummyResponse(status_code=500)):
+    with patch("requests.Session.post", return_value=DummyResponse(status_code=500)):
         ok2 = client.register_dataset(ds)
         assert ok2 is False
 
@@ -287,17 +287,17 @@ def test_get_datasets_and_get_dataset_metadata(monkeypatch):
     client = FeatureStoreClient(project_name="proj", feature_store_url="http://fs")
 
     # get_datasets_metadata -> note code uses instance_url + "s" (legacy), but we just mock requests.get
-    with patch("requests.get", return_value=DummyResponse(status_code=200, json_obj=[{"ds": 1}])):
+    with patch("requests.Session.get", return_value=DummyResponse(status_code=200, json_obj=[{"ds": 1}])):
         r = client.get_datasets_metadata()
         assert r == [{"ds": 1}]
 
     # get_dataset_metadata -> success
-    with patch("requests.get", return_value=DummyResponse(status_code=200, json_obj={"storage_path": "sp"})):
+    with patch("requests.Session.get", return_value=DummyResponse(status_code=200, json_obj={"storage_path": "sp"})):
         g = client.get_dataset_metadata("name", "train", 1)
         assert g == {"storage_path": "sp"}
 
     # failure path
-    with patch("requests.get", return_value=DummyResponse(status_code=500)):
+    with patch("requests.Session.get", return_value=DummyResponse(status_code=500)):
         assert client.get_dataset_metadata("name", "train", 1) is None
 
 
@@ -351,7 +351,7 @@ def test_download_dataset_downloads_instances(monkeypatch, tmp_path):
         )
         with (
             patch.object(client, "download_instance", return_value=None) as dl,
-            patch("requests.get", return_value=DummyResponse(status_code=200)) as dl2,
+            patch("requests.Session.get", return_value=DummyResponse(status_code=200)) as dl2,
         ):
             ds = client.download_dataset("name", "train", 1, output_dir, download_instances=True)
             # ensure we return the dataset object
@@ -371,10 +371,10 @@ def test_remove_dataset_paths(monkeypatch):
     client = FeatureStoreClient(project_name="proj", feature_store_url="http://fs")
 
     # dataset absent -> False
-    with patch("requests.delete", return_value=DummyResponse(status_code=400)):
+    with patch("requests.Session.delete", return_value=DummyResponse(status_code=400)):
         assert client.remove_dataset("n", "s", 1) is False
 
     # present and delete succeeds
-    with patch("requests.delete", return_value=DummyResponse(status_code=200)):
+    with patch("requests.Session.delete", return_value=DummyResponse(status_code=200)):
         ok = client.remove_dataset("n", "s", 1)
         assert ok is True
