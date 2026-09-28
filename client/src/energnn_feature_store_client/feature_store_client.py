@@ -660,7 +660,7 @@ class FeatureStoreClient(RemoteRegistryClient):
             return False
 
 
-def _check_response(response: requests.Response) -> None:
+def _check_response(response: requests.Response) -> bool:
     if response.status_code != 200:
         if response.status_code == 401:
             logger.error(
@@ -670,6 +670,7 @@ def _check_response(response: requests.Response) -> None:
         else:
             logger.error(response.json())
         return False
+    return True
 
 
 def write_zip_from_response(
