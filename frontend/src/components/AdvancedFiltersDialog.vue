@@ -14,7 +14,7 @@
         <!-- TAGS -->
         <div class="mb-4">
           <div class="d-flex justify-space-between align-center mb-2">
-            <div class="text-subtitle-1">Tags</div>
+            <div class="text-subtitle-1">Text tags</div>
             <v-btn small text @click="addTag"><v-icon left>mdi-plus</v-icon> Add</v-btn>
           </div>
 
@@ -82,6 +82,61 @@
             </v-btn>
           </div>
         </div>
+
+        <v-divider class="my-4" />
+
+        <!-- NUMERICAL TAGS -->
+        <div>
+          <div class="d-flex justify-space-between align-center mb-2">
+            <div class="text-subtitle-1">Numerical tags</div>
+            <v-btn small text @click="addNumericalFilter"><v-icon left>mdi-plus</v-icon> Add</v-btn>
+          </div>
+
+          <div v-if="numericalFilters.length === 0" class="mb-2 grey--text text--darken-1">No numerical filters defined.</div>
+
+          <div v-for="(nf, idx) in numericalFilters" :key="'num-'+idx" class="d-flex gap-2 align-center mb-2">
+            <v-text-field
+              v-model="nf.key"
+              label="Key"
+              hide-details
+              dense
+              class="flex-grow-1"
+            />
+            <v-select
+              v-model="nf.type"
+              :items="[
+                {title: 'Between', value: 'between'},
+                {title: 'Lower', value: 'lower'},
+                {title: 'Upper', value: 'upper'},
+                {title: 'Equal', value: 'equal'}
+              ]"
+              label="Type"
+              hide-details
+              dense
+              class="flex-grow-1"
+            />
+            <v-text-field
+              v-model.number="nf.value1"
+              :label="nf.type === 'between' ? 'From' : nf.type === 'lower' ? 'Max' : nf.type === 'upper' ? 'Min' : 'Value'"
+              type="number"
+              hide-details
+              dense
+              class="flex-grow-1"
+            />
+            <v-text-field
+              v-if="nf.type === 'between'"
+              v-model.number="nf.value2"
+              label="To"
+              type="number"
+              hide-details
+              dense
+              class="flex-grow-1"
+            />
+            <v-btn icon small @click="removeNumericalFilter(idx)" :title="'Remove'">
+              <v-icon>mdi-close</v-icon>
+            </v-btn>
+          </div>
+        </div>
       </v-card-text>
 
       <v-divider />
@@ -100,8 +155,9 @@ import { ref, watch } from "vue";
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
-  initialTagFilters: { type: Object, default: () => ({}) },      // { key: value, ... }
-  initialDateFilters: { type: Object, default: () => ({}) }      // { key: [fromISO, toISO], ... }
+  initialTextFilters: { type: Object, default: () => ({}) },      // { key: value, ... }
+  initialDateFilters: { type: Object, default: () => ({}) },      // { key: [fromISO, toISO], ... }
+  initialNumericalFilters: { type: Object, default: () => ({}) }      // { key: [min, max], ... }
 });
 
 const emit = defineEmits(["update:modelValue", "save", "cancel"]);
@@ -123,6 +179,25 @@ function objToDateArr(obj) {
     from: Array.isArray(v) && v[0] ? isoToLocalDatetimeInput(v[0]) : "",
     to: Array.isArray(v) && v[1] ? isoToLocalDatetimeInput(v[1]) : ""
   }));
+}
+function objToNumericalArr(obj) {
+  return Object.entries(obj || {}).map(([k, v]) => {
+    let type = "between";
+    let v1 = Array.isArray(v) ? v[0] : null;
+    let v2 = Array.isArray(v) ? v[1] : null;
+
+    if (v1 !== null && v2 !== null) {
+      if (v1 === v2) type = "equal";
+      else type = "between";
+    } else if (v1 !== null) {
+      type = "upper";
+    } else if (v2 !== null) {
+      type = "lower";
+      v1 = v2;
+      v2 = null;
+    }
+    return { key: k, type, value1: v1, value2: v2 };
+  });
 }
 
 function isoToLocalDatetimeInput(iso) {
@@ -146,12 +221,14 @@ function localDatetimeInputToIso(v) {
   return d.toISOString();
 }
 
-const tags = ref(objToTagArr(props.initialTagFilters));
+const tags = ref(objToTagArr(props.initialTextFilters));
 const dates = ref(objToDateArr(props.initialDateFilters));
+const numericalFilters = ref(objToNumericalArr(props.initialNumericalFilters));
 
 // Reset local arrays whenever initial props change
-watch(() => props.initialTagFilters, (nv) => { tags.value = objToTagArr(nv); }, { deep: true });
+watch(() => props.initialTextFilters, (nv) => { tags.value = objToTagArr(nv); }, { deep: true });
 watch(() => props.initialDateFilters, (nv) => { dates.value = objToDateArr(nv); }, { deep: true });
+watch(() => props.initialNumericalFilters, (nv) => { numericalFilters.value = objToNumericalArr(nv); }, { deep: true });
 
 // Add/remove
 function addTag() { tags.value.push({ key: "", value: "" }); }
@@ -160,10 +237,18 @@ function removeTag(i) { tags.value.splice(i, 1); }
 function addDate() { dates.value.push({ key: "", from: "", to: "" }); }
 function removeDate(i) { dates.value.splice(i, 1); }
 
+function addNumericalFilter() {
+  numericalFilters.value.push({ key: "", type: "between", value1: null, value2: null });
+}
+function removeNumericalFilter(i) {
+  numericalFilters.value.splice(i, 1);
+}
+
 // Cancel: clear local lines and emit 'cancel' so parent can also clear saved filters if desired
 function onCancel() {
   tags.value = [];
   dates.value = [];
+  numericalFilters.value = [];
   emit("cancel");
   visibleLocal.value = false;
 }
@@ -189,7 +274,25 @@ function onSave() {
     }
   }
 
-  emit("save", { tagFilters: tagObj, dateFilters: dateObj });
+  const rangeObj = {};
+  for (const nf of numericalFilters.value) {
+    if (nf.key && nf.key.trim() !== "") {
+      const v1 = (nf.value1 !== null && nf.value1 !== "") ? Number(nf.value1) : null;
+      const v2 = (nf.value2 !== null && nf.value2 !== "") ? Number(nf.value2) : null;
+
+      if (nf.type === "equal") {
+        if (v1 !== null) rangeObj[nf.key.trim()] = [v1, v1];
+      } else if (nf.type === "lower") {
+        if (v1 !== null) rangeObj[nf.key.trim()] = [null, v1];
+      } else if (nf.type === "upper") {
+        if (v1 !== null) rangeObj[nf.key.trim()] = [v1, null];
+      } else if (nf.type === "between") {
+        if (v1 !== null || v2 !== null) rangeObj[nf.key.trim()] = [v1, v2];
+      }
+    }
+  }
+
+  emit("save", { textFilters: tagObj, dateFilters: dateObj, numericalFilters: rangeObj });
   visibleLocal.value = false;
 }
 </script>

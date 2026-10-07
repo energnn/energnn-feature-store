@@ -104,7 +104,8 @@ def get_instances_query(
     min_version: int | None = None,
     max_version: int | None = None,
     date_filters: dict[str, tuple[datetime, datetime]] | None = None,
-    tag_filters: dict | None = None,
+    numerical_filters: dict[str, tuple[float | None, float | None]] | None = None,
+    text_filters: dict | None = None,
 ):
 
     query = db.query(models.ProblemInstance).filter(
@@ -128,8 +129,17 @@ def get_instances_query(
                 .astext.cast(DateTime)
                 .between(v[0], v[1])
             )
-    if tag_filters:
-        for k, v in tag_filters.items():
+    if numerical_filters:
+        for k, v in numerical_filters.items():
+            col = models.ProblemInstance.filter_tags[k].astext.cast(Float)
+            if v[0] is not None and v[1] is not None:
+                query = query.filter(col.between(v[0], v[1]))
+            elif v[0] is not None:
+                query = query.filter(col >= v[0])
+            elif v[1] is not None:
+                query = query.filter(col <= v[1])
+    if text_filters:
+        for k, v in text_filters.items():
             query = query.filter(models.ProblemInstance.filter_tags[k].astext == v)
     return query
 

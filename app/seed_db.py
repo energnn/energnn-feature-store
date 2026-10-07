@@ -223,6 +223,7 @@ def seed(
                         decision_shape={"k": random.randint(1, 5)},
                         filter_tags={
                             "status": random.choice(["new", "processed", "failed"]),
+                            "size": random.randint(1, 100),
                             "created_at": (
                                 datetime.now(timezone.utc)
                                 - timedelta(days=random.randint(0, 365))
