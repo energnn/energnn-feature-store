@@ -90,8 +90,7 @@ class FeatureStoreClient(RemoteRegistryClient):
                     "config": (None, json.dumps(register_info), "application/json"),
                 },
             )
-        if response.status_code != 200:
-            logger.error(response.json())
+        if not _check_response(response):
             return False
         os.remove(config_path + ".zip")
         return True
@@ -118,7 +117,7 @@ class FeatureStoreClient(RemoteRegistryClient):
             url=self.config_url,
             params={"project_name": self.project_name, "config_id": config_id},
         )
-        if response.status_code == 400:
+        if not _check_response(response):
             return None
         return response.json()
 
@@ -133,8 +132,7 @@ class FeatureStoreClient(RemoteRegistryClient):
             url=self.config_url,
             params={"project_name": self.project_name, "config_id": config_id},
         )
-        if response.status_code != 200:
-            logger.error(response.json())
+        if not _check_response(response):
             return False
         return True
 
@@ -145,11 +143,7 @@ class FeatureStoreClient(RemoteRegistryClient):
             url=self.config_url + "/download",
             params={"project_name": self.project_name, "config_id": config_id},
         )
-        if response.status_code != 200:
-            raise Exception(
-                f"Error while trying to download configuration {config_id} for project {self.project_name}"
-                f" : {response.json()['message']}."
-            )
+        _check_response(response, throw=True)
         return write_zip_from_response(response, output_dir, unzip)
 
     def register_instance(self, instance: Problem) -> bool:
@@ -180,8 +174,7 @@ class FeatureStoreClient(RemoteRegistryClient):
                         ),
                     },
                 )
-            if response.status_code != 200:
-                logger.error(response.json())
+            if not _check_response(response):
                 return False
         return True
 
@@ -217,8 +210,7 @@ class FeatureStoreClient(RemoteRegistryClient):
         if range_filters is not None:
             body["range_filters"] = range_filters
         response = requests.get(url=self.instance_url + "s", params=params, json=body)
-        if response.status_code != 200:
-            logger.error(response.json())
+        if not _check_response(response):
             return None
         return response.json()
 
@@ -240,8 +232,7 @@ class FeatureStoreClient(RemoteRegistryClient):
             "code_version": code_version,
         }
         response = requests.get(url=self.instance_url, params=instance_key)
-        if response.status_code != 200:
-            logger.error(response.json())
+        if not _check_response(response):
             return None
         return response.json()
 
@@ -281,10 +272,7 @@ class FeatureStoreClient(RemoteRegistryClient):
             response = requests.get(
                 url=self.instance_url + "/download", params=instance_key
             )
-            if response.status_code != 200:
-                raise Exception(
-                    f"Error while trying to download instance : {response.json()['message']}."
-                )
+            _check_response(response, throw=True)
             return write_zip_from_response(response, output_dir, unzip)
         else:
             logger.info(
@@ -309,8 +297,7 @@ class FeatureStoreClient(RemoteRegistryClient):
             "code_version": code_version,
         }
         response = requests.delete(url=self.instance_url, params=instance_key)
-        if response.status_code != 200:
-            logger.error(response.json())
+        if not _check_response(response):
             return False
         logger.info(
             f"Successfully removed instance {name}/{config_id}/{code_version} from feature store."
@@ -348,8 +335,7 @@ class FeatureStoreClient(RemoteRegistryClient):
                         ),
                     },
                 )
-            if response.status_code != 200:
-                logger.error(response.json())
+            if not _check_response(response):
                 return False
         return True
 
@@ -362,9 +348,8 @@ class FeatureStoreClient(RemoteRegistryClient):
         response = requests.get(
             url=self.instance_url + "s", params={"project_name": self.project_name}
         )
-        if response.status_code != 200:
-            logger.error(response.json())
-            return None
+        if not _check_response(response):
+            return False
         return response.json()
 
     def get_dataset_metadata(self, name: str, split: str, version: int):
@@ -383,9 +368,8 @@ class FeatureStoreClient(RemoteRegistryClient):
             "version": version,
         }
         response = requests.get(url=self.dataset_url, params=dataset_key)
-        if response.status_code != 200:
-            logger.error(response.json())
-            return None
+        if not _check_response(response):
+            return False
         return response.json()
 
     def download_dataset(
@@ -425,10 +409,7 @@ class FeatureStoreClient(RemoteRegistryClient):
             response = requests.get(
                 url=self.dataset_url + "/download", params=dataset_key
             )
-            if response.status_code != 200:
-                raise Exception(
-                    f"Error while trying to download dataset : {response.json()['message']}."
-                )
+            _check_response(response, throw=True)
             write_zip_from_response(response, output_dir, unzip=True)
         else:
             logger.info(f"Dataset file for {key} already downloaded")
@@ -478,8 +459,7 @@ class FeatureStoreClient(RemoteRegistryClient):
             "version": version,
         }
         response = requests.delete(url=self.dataset_url, params=dataset_key)
-        if response.status_code != 200:
-            logger.error(response.json())
+        if not _check_response(response):
             return False
         logger.info(f"Successfully removed dataset {str_key} from feature store.")
         return True
@@ -566,8 +546,7 @@ class FeatureStoreClient(RemoteRegistryClient):
                         "step": (None, json.dumps(metadata), "application/json"),
                     },
                 )
-            if response.status_code != 200:
-                logger.error(response.json())
+            if not _check_response(response):
                 return False
         logger.info(f"Successfully registered step {run_name}")
         return True
@@ -585,9 +564,7 @@ class FeatureStoreClient(RemoteRegistryClient):
         except requests.RequestException as exc:
             logger.error("Failed to call run service: %s", exc)
             return None
-        if response.status_code != 200:
-            body = response.text.strip()
-            logger.error(body)
+        if not _check_response(response):
             return None
 
         try:
@@ -614,8 +591,7 @@ class FeatureStoreClient(RemoteRegistryClient):
         body = steps
 
         response = requests.delete(url=self.run_url, params=params, json=body)
-        if response.status_code != 200:
-            logger.error(response.json())
+        if not _check_response(response):
             return False
         logger.info("Successfully removed steps from feature store.")
         return True
@@ -640,8 +616,7 @@ class FeatureStoreClient(RemoteRegistryClient):
         }
 
         response = requests.get(url=self.run_url + "/download", params=params)
-        if response.status_code != 200:
-            logger.error(response.json())
+        if not _check_response(response):
             return False
 
         if dest_dir.exists():
@@ -712,9 +687,23 @@ def zip_files_to_send(source_path: str):
     if os.path.isdir(source_path):
         shutil.make_archive(source_path, "zip", source_path)
     else:
-        zipfile.ZipFile(source_path + ".zip", mode="w").write(
+        zipfile.ZipFile(source_path + ".zip", mode="w", compression=zipfile.ZIP_DEFLATED).write(
             source_path, os.path.basename(source_path)
         )
+
+
+def _check_response(response: requests.Response, throw: bool = False) -> bool:
+    if response.status_code != 200:
+        try:
+            error_message = response.json()
+        except ValueError:
+            error_message = response.text
+        if throw:
+            raise Exception(f"Request failed with code {response.status_code}: {error_message}")
+        else:
+            logger.error(f"Request failed with code {response.status_code}: {error_message}")
+        return False
+    return True
 
 
 class MissingDatasetError(Exception):
