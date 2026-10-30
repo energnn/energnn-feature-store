@@ -113,7 +113,13 @@ def seed(
     models.Base.metadata.create_all(bind=engine)
 
     db = SessionLocal()
-    created = {"configs": 0, "datasets": 0, "instances": 0, "runs": 0}
+    created = {
+        "configs": 0,
+        "datasets": 0,
+        "instances": 0,
+        "runs": 0,
+        "run_configs": 0,
+    }
     try:
         if project_names is None:
             project_names = [fake.word() for _ in range(2)]
@@ -258,6 +264,27 @@ def seed(
             # Create some runs steps
             for i in range(run_by_project):
                 run_id = f"run_{i+1}"
+
+                # Create Run Config
+                existing_run_config = crud.get_run_config(db, project, run_id)
+                if existing_run_config is None:
+                    try:
+                        run_config_schema = schemas.RunConfig(
+                            project_name=project, run_id=run_id
+                        )
+                        yaml_content = f"project: {project}\nrun_id: {run_id}\nseed: {random.randint(0, 100000)}\n"
+                        config_file = UploadFile(
+                            filename="config.yaml",
+                            file=BytesIO(yaml_content.encode("utf-8")),
+                        )
+                        crud.register_run_config(
+                            db, config=run_config_schema, config_file=config_file
+                        )
+                        created["run_configs"] += 1
+                        logging.info(f"Inserted run config for {run_id} in {project}")
+                    except Exception as e:
+                        logging.error(f"Error while registering run config {run_id}: {e}")
+
                 for s in np.random.choice(range(1, 11), size=3, replace=False):
                     # storage_uuid = uuid.uuid4()
                     run_schema = schemas.RunStep(
@@ -295,6 +322,7 @@ def seed(
     logging.info(f"  datasets created: {created['datasets']}")
     logging.info(f"  instances created: {created['instances']}")
     logging.info(f"  runs created: {created['runs']}")
+    logging.info(f"  run configs created: {created['run_configs']}")
 
 
 if __name__ == "__main__":
