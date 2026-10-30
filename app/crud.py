@@ -471,3 +471,26 @@ def delete_run_steps(
     except Exception as exc:
         db.rollback()
         raise Exception(f"Error occurs when deleting run record: {str(exc)}")
+
+
+def register_run_config(
+    db: Session, config: schemas.RunConfig, config_file: UploadFile
+):
+    db_config = models.RunConfig(
+        project_name=config.project_name,
+        run_id=config.run_id,
+    )
+    try:
+        db.merge(db_config)
+        db.flush()
+        run_config_key = f"{config.project_name}/runs/{config.run_id}/config.yaml"
+        s3.upload_object(run_config_key, config_file.file)
+        db.commit()
+        return db_config
+    except Exception as exc:
+        db.rollback()
+        raise exc
+
+
+def get_run_config(db: Session, project_name: str, run_id: str):
+    return db.query(models.RunConfig).get((project_name, run_id))

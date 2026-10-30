@@ -89,3 +89,8 @@ class RunStep(BaseAlongsideFile):
     # last: bool
     # tags: dict
     # storage_path: uuid.UUID
+
+
+class RunConfig(BaseAlongsideFile):
+    project_name: str
+    run_id: str

@@ -417,6 +417,24 @@ def register_run_step(
     crud.register_run_step(db=db, step=step, step_file=step_file)
 
 
+@app.post("/run_config", tags=["Runs"])
+def register_run_config(
+    config: schemas.RunConfig, config_file: UploadFile, db: Session = Depends(get_db)
+):
+    return crud.register_run_config(db=db, config=config, config_file=config_file)
+
+
+@app.get("/run_config/download", tags=["Runs"])
+def download_run_config(
+    project_name: str, run_id: str, db: Session = Depends(get_db)
+):
+    res = crud.get_run_config(db, project_name, run_id)
+    if res is None:
+        raise NoResultFound
+    run_config_key = f"{project_name}/runs/{run_id}/config.yaml"
+    return download_s3(run_config_key)
+
+
 @app.get("/runs", response_model=list[schemas.RunStep], tags=["Runs"])
 def get_runs(project_name: str, db: Session = Depends(get_db)):
     return crud.get_runs(db, project_name=project_name)

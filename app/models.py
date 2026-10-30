@@ -71,3 +71,10 @@ class RunStep(Base):
     # last = Column(Boolean)
     # tags = Column(JSONB)
     # storage_path = Column(UUID)
+
+
+class RunConfig(Base):
+    __tablename__ = "run_config"
+
+    project_name = Column(String, index=True, primary_key=True)
+    run_id = Column(String, index=True, primary_key=True)
