@@ -74,12 +74,21 @@
             <div class="action-icons">
               <v-icon size="small" @click="openDetails(item)" title="Show row details" >mdi-eye-outline</v-icon>
                 <span class="action-icon">
+                  <template v-if="isDownloadingConfig(item)">
+                    <v-progress-circular indeterminate size="18" width="2"></v-progress-circular>
+                    <v-btn text small @click="cancelConfig(item)">Cancel</v-btn>
+                  </template>
+                  <template v-else>
+                    <v-icon size="small" title="Download Run Config" @click="handleDownloadConfig(item)" >mdi-file-cog-outline</v-icon>
+                  </template>
+                </span>
+                <span class="action-icon">
                   <template v-if="isDownloading(item)">
                     <v-progress-circular indeterminate size="18" width="2"></v-progress-circular>
                     <v-btn text small @click="cancel(item)">Cancel</v-btn>
                   </template>
                   <template v-else>
-                    <v-icon size="small" title="Download" @click="handleDownload(item)" >mdi-download</v-icon>
+                    <v-icon size="small" title="Download Checkpoint" @click="handleDownload(item)" >mdi-download</v-icon>
                   </template>
                 </span>
               <!-- <v-icon size="small" color="error" title="Delete" @click="openDeleteDialog(item)">mdi-delete</v-icon> -->
@@ -237,8 +246,17 @@ function itemToObjectKey(item) {
   return `${item.project_name}/runs/${item.run_id}/checkpoints/${item.training_step}`;
 }
 
+function itemToConfigKey(item) {
+  return `${item.project_name}/runs/${item.run_id}/config`;
+}
+
 function isDownloading(item) {
   const key = itemToObjectKey(item);
+  return store.getters.isDownloading(key);
+}
+
+function isDownloadingConfig(item) {
+  const key = itemToConfigKey(item);
   return store.getters.isDownloading(key);
 }
 
@@ -255,14 +273,36 @@ async function handleDownload(item) {
     if (err?.isCanceled) {
       showDeleteAlert("Download cancelled", "info", 1500);
     } else {
-      const friendly = err.response.data.message;
+      const friendly = err.message || (err.response && err.response.data && err.response.data.message) || "Unknown error";
       showDeleteAlert(`Download failed: ${friendly}`, "error", 0);
+    }
+  }
+}
+
+async function handleDownloadConfig(item) {
+  try {
+    await store.dispatch("downloadRunConfig", {
+      project_name: item.project_name,
+      run_id: item.run_id
+    });
+    showDeleteAlert("Config download finished", "success", 2000);
+  } catch (err) {
+    if (err?.isCanceled) {
+      showDeleteAlert("Download cancelled", "info", 1500);
+    } else {
+      const friendly = err.message || (err.response && err.response.data && err.response.data.message) || "Unknown error";
+      showDeleteAlert(`Config download failed: ${friendly}`, "error", 0);
     }
   }
 }
 
 function cancel(item) {
   const id = itemToObjectKey(item);
+  store.dispatch("cancelDownload", id);
+}
+
+function cancelConfig(item) {
+  const id = itemToConfigKey(item);
   store.dispatch("cancelDownload", id);
 }
 

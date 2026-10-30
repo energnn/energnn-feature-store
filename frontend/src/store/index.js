@@ -445,6 +445,51 @@ const store = createStore({
       }
     },
 
+    async downloadRunConfig({ commit }, { project_name, run_id }) {
+      const id = `${project_name}/runs/${run_id}/config`;
+      const controller = new AbortController();
+      commit("SET_DOWNLOAD_CONTROLLER", { id, controller });
+      commit("SET_DOWNLOADING", { id, value: true });
+
+      try {
+        const resp = await api.downloadRunConfig(project_name, run_id, { signal: controller.signal });
+        
+        let filename = `config_${run_id}.yaml`;
+        try {
+          const cd = resp.headers["content-disposition"] || resp.headers["Content-Disposition"];
+          if (cd) {
+            const m = /filename\*=UTF-8''([^;]+)|filename="([^"]+)"/i.exec(cd);
+            if (m) filename = decodeURIComponent(m[1] || m[2]);
+          }
+        } catch (e) {
+          console.warn("Could not parse Content-Disposition", e);
+        }
+
+        const blob = new Blob([resp.data], { type: resp.headers["content-type"] || "application/x-yaml" });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+
+        commit("REMOVE_DOWNLOAD_CONTROLLER", id);
+        commit("REMOVE_DOWNLOADING", id);
+        return { success: true, filename };
+      } catch (err) {
+        commit("REMOVE_DOWNLOAD_CONTROLLER", id);
+        commit("REMOVE_DOWNLOADING", id);
+        if (err && (err.name === "AbortError" || err?.code === "ERR_CANCELED")) {
+          const e = new Error("Download aborted by user");
+          e.isCanceled = true;
+          throw e;
+        }
+        throw err;
+      }
+    },
+
   },
   getters: {
     instances: (s) => s.instances,

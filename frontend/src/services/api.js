@@ -45,4 +45,13 @@ export const deleteConfig = (project_name, config_id) => api.delete("/config", {
 export const fetchRuns = (project_name) => api.get("/runs", { params: { project_name } });
 export const deleteRun = (project_name, run_id, training_step) => api.delete("/run", { params: { project_name, run_id, training_step } });
 
+export const downloadRunConfig = (project_name, run_id, { signal } = {}) => {
+  return api.get("/run_config/download", {
+    params: { project_name, run_id },
+    responseType: "blob",
+    timeout: 0,
+    signal
+  });
+};
+
 export default api;
