@@ -48,6 +48,7 @@ class FeatureStoreClient(RemoteRegistryClient):
     instance_url: str
     dataset_url: str
     run_url: str
+    run_config_url: str
 
     def __init__(self, *, project_name: str, feature_store_url: str):
         self.project_name = project_name
@@ -56,6 +57,7 @@ class FeatureStoreClient(RemoteRegistryClient):
         self.instance_url = self.feature_store_url + "/instance"
         self.dataset_url = self.feature_store_url + "/dataset"
         self.run_url = self.feature_store_url + "/run"
+        self.run_config_url = self.run_url + "/run_config"
 
     def register_config(self, config_path: str, config_id: str) -> bool:
         """
@@ -490,6 +492,7 @@ class FeatureStoreClient(RemoteRegistryClient):
         directory: str | None = None,
         parent_run_id: str | None = None,
         sync_from_remote: bool = False,
+        config_path: str | None = None,
         **kwargs,
     ) -> RemoteCheckpointManager:
         """
@@ -499,6 +502,7 @@ class FeatureStoreClient(RemoteRegistryClient):
         :param directory: Local directory for storing checkpoints.
         :param parent_run_id: Optional parent run identifier.
         :param sync_from_remote: Whether to synchronize checkpoints from remote storage.
+        :param config_path: Optional path to a configuration file to register for the run.
         :return: RemoteCheckpointManager instance for managing checkpoints.
         """
 
@@ -508,6 +512,7 @@ class FeatureStoreClient(RemoteRegistryClient):
             directory=directory,
             parent_run_id=parent_run_id,
             sync_from_remote=sync_from_remote,
+            config_path=config_path,
             **kwargs,
         )
 
@@ -668,6 +673,56 @@ class FeatureStoreClient(RemoteRegistryClient):
             except Exception:
                 logger.exception("Failed to cleanup partial extraction at %s", dest_dir)
             return False
+
+    def register_run_config(self, config_path: str, run_id: str) -> bool:
+        """
+        Registers a configuration file for a specific run into the feature store.
+
+        :param config_path: Path to the configuration file.
+        :param run_id: Identifier of the run.
+        :return: True if the configuration is registered successfully, False otherwise.
+        """
+        register_info = {
+            "project_name": self.project_name,
+            "run_id": run_id,
+        }
+
+        with open(config_path, "rb") as file:
+            response = requests.post(
+                url=self.run_config_url,
+                files={
+                    "config_file": file,
+                    "config": (None, json.dumps(register_info), "application/json"),
+                },
+            )
+        if response.status_code != 200:
+            logger.error(response.json())
+            return False
+        return True
+
+    def download_run_config(self, run_id: str, output_dir: str) -> bool:
+        """
+        Downloads the configuration file for a specific run from the feature store.
+
+        :param run_id: Identifier of the run.
+        :param output_dir: Local directory where the configuration will be saved.
+        :return: True if the download is successful, False otherwise.
+        """
+        params = {
+            "project_name": self.project_name,
+            "run_id": run_id,
+        }
+
+        response = requests.get(url=self.run_config_url + "/download", params=params)
+        if response.status_code != 200:
+            logger.error(response.json())
+            return False
+
+        output_path = Path(output_dir) / "config.yaml"
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(output_path, "wb") as f:
+            f.write(response.content)
+        return True
 
 
 def write_zip_from_response(

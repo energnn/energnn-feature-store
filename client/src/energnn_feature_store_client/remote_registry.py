@@ -61,3 +61,27 @@ class RemoteRegistryClient(ABC):
         """
 
         raise NotImplementedError
+
+    @abstractmethod
+    def register_run_config(self, config_path: str, run_id: str) -> bool:
+        """
+        Registers a configuration file for a specific run into the remote registry.
+
+        :param config_path: Path to the configuration file.
+        :param run_id: Identifier of the run.
+        :return: True if the configuration is registered successfully, False otherwise.
+        """
+
+        raise NotImplementedError
+
+    @abstractmethod
+    def download_run_config(self, run_id: str, output_dir: str) -> bool:
+        """
+        Downloads the configuration file for a specific run from the remote registry.
+
+        :param run_id: Identifier of the run.
+        :param output_dir: Local directory where the configuration will be saved.
+        :return: True if the download is successful, False otherwise.
+        """
+
+        raise NotImplementedError

@@ -32,6 +32,7 @@ class RemoteCheckpointManager(CheckpointManager):
         directory: str | None = None,
         parent_run_id: str | None = None,
         sync_from_remote: bool = False,
+        config_path: str | None = None,
         **kwargs,
     ):
         self._lock = threading.RLock()
@@ -44,6 +45,13 @@ class RemoteCheckpointManager(CheckpointManager):
 
         base_dir = pathlib.Path(local_dir_str)
         base_dir.mkdir(parents=True, exist_ok=True)
+
+        if config_path is not None:
+            saved_config = self._remote_client.register_run_config(
+                config_path, self.run_id
+            )
+            if not saved_config:
+                raise RuntimeError("Failed to save run configuration to remote registry")
 
         if sync_from_remote:
             self.sync_checkpoints_from_remote()
